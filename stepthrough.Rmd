@@ -1,0 +1,107 @@
+---
+title: "stepthrough"
+author: "Nina Zumel"
+date: "February 5, 2016"
+output: html_document
+---
+
+Step through the thought process behind the bootstrap simulations. Produces some of the plots for the blog article.
+
+
+
+```{r}
+library(ggplot2)
+library(GGally)
+library(plot3D)
+library(grid)
+library(RColorBrewer)
+source("kcomp_functions.R")
+
+set.seed(3894) # set seed for reproducibility
+```
+
+```{r functions}
+# more instrumented version of null_clustering
+null_clustering_x = function(dmatrix, k, nstart=10, iter.max=100) {
+  clustering = kmeans(dmatrix, k, nstart=nstart, iter.max=iter.max)
+  # return cluster assignments and total WSS
+  list(cluster=clustering$cluster, totWSS = clustering$tot.withinss, allinfo=clustering)
+}
+
+#
+# Plot multiple plot objects one one page
+#
+nplot = function(plist) {
+  n = length(plist)
+  grid.newpage()
+  pushViewport(viewport(layout=grid.layout(n,1)))
+  vplayout=function(x,y) {viewport(layout.pos.row=x, layout.pos.col=y)}
+  for(i in 1:n) {
+    print(plist[[i]], vp=vplayout(i,1))
+  }
+}
+
+D = 2
+trueK = 4
+
+datax = make_data(D, trueK)
+
+# scatterplot_data(datax) + ggtitle("original data")
+ggplot(datax, aes(x=x1, y=x2)) + geom_point(color="darkgray") + 
+  coord_fixed() + ggtitle("original data")
+data0 = as.matrix(datax[, 1:D, drop=FALSE])
+```
+
+
+```{r compare}
+
+m = 2
+# create the simdata for the null hypothesis
+forparams = null_clustering_x(data0, m)
+labels = forparams$cluster
+scatterplot_data(cbind(as.data.frame(data0), gp=as.character(labels))) + ggtitle(paste("cluster, m =", m))
+
+simdata = generate_bootstrap(data0, labels)
+# to make labels for simdata
+ltab = table(labels)
+blabels = do.call(c, lapply(seq_len(m), function(i){rep(i, ltab[i])}))
+
+toplot = as.data.frame(simdata); toplot$gp = as.character(blabels) # these labels are wrong
+scatterplot_data(toplot) + ggtitle(paste("bootstrap simulated data, m =", m))
+
+K = m+1
+cluster2_true = null_clustering_x(data0, K)
+data2 = cbind(as.data.frame(data0), gp = as.character(cluster2_true$cluster))
+data2_info = cbind(k=1:K, as.data.frame(cluster2_true$allinfo$centers))
+data2_info$wss = cluster2_true$allinfo$withinss
+
+plot1 = ggplot(data2, aes(x=x1, y=x2)) + geom_point(aes(color=gp)) +
+  geom_label(data=data2_info, aes(label=wss)) +
+  geom_point(data=data2_info) + scale_color_brewer(palette="Set2") + 
+  ggtitle(paste("True data, Total WSS = ", cluster2_true$totWSS))
+
+cluster2_sim = null_clustering_x(as.matrix(simdata), K)
+datasim2 = cbind(as.data.frame(simdata), gp = as.character(cluster2_sim$cluster))
+
+sim_info = cbind(k=1:K, as.data.frame(cluster2_sim$allinfo$centers))
+sim_info$wss = cluster2_sim$allinfo$withinss
+
+plot2 = ggplot(datasim2, aes(x=x1, y=x2)) + geom_point(aes(color=gp)) +
+  geom_label(data=sim_info, aes(label=wss)) +
+  geom_point(data=sim_info) + scale_color_brewer(palette="Set2") + 
+  ggtitle(paste("Bootstrap data, Total WSS = ", cluster2_sim$totWSS))
+
+nplot(list(plot1, plot2))
+
+
+# do the bootstrap thing by hand, 100 times
+ wssdist = vapply(seq_len(100),
+                   FUN=function(i) {
+                     kmeans(generate_bootstrap(data0, labels), K)$tot.withinss
+                     },
+                   numeric(1))
+ ggplot(data.frame(wss=wssdist), aes(x=wss)) + geom_density() + 
+   geom_vline(xintercept=cluster2_true$totWSS, color="red")
+
+```
+

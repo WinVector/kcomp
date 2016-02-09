@@ -1,0 +1,59 @@
+---
+title: "Finding the K in K-means by Parametric Bootstrap"
+author: "Nina Zumel"
+date: "February 4, 2016"
+output: html_document
+---
+
+An example of running the code for our experiments in parametric bootstrap to estimate the number of clusters.
+
+```{r libraries}
+library(ggplot2)
+library(GGally)
+library(plot3D)
+source("kcomp_functions.R")
+
+set.seed(3894) # set seed for reproducibility
+```
+
+```{r makedata}
+# 4 clusters in 2-D
+
+D = 2
+trueK = 4
+
+datax = make_data(D, trueK)
+
+scatterplot_data(datax) + coord_fixed() + ggtitle("Original Data")
+
+# for 3-D or higher dimensional data, you can also plot the 3-D projection
+# plot3d_data(datax)
+
+```
+
+```{r findclusters}
+data0 = datax[, 1:D, drop=FALSE]
+
+# run the parametric bootstrap
+results = find_clusters(data0)
+
+# use find_clusters_scan to do the full search, instead of stopping early
+#results = find_clusters_scan(data0)
+
+title = paste("Estimate:", results$nclusters, "clusters")
+results$simplot + ggtitle(title)  # simplot is already a ggplot
+print(paste("Experiment pvals:", clustering_report(results$pvals)))
+results$pvalplot
+
+```
+
+```{r recluster}
+# recluster the data based on the inferred K
+dataplus = recluster(data0, results$nclusters)
+
+scatterplot_data(dataplus) + coord_fixed() + ggtitle("Reclustered Data")
+
+# for 3-D or higher dimensional data, you can also plot the 3-D projection
+# plot3d_data(dataplus)
+
+```
