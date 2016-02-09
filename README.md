@@ -8,7 +8,7 @@ The primary code is in `kcomp_functions.R`. The R markdown file `kcomp.Rmd` show
 
 ## Links and References
 
-* Our blog post on this approach is here.
+* Our blog post on this approach is [here](http://www.win-vector.com/blog/2016/02/finding-the-k-in-k-means-by-parametric-bootstrap/).
 
 * A Shiny app that demonstrates this code interactively is [here](https://win-vector.shinyapps.io/kcompshiny/).
 
