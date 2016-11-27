@@ -20,3 +20,4 @@ vignettes/*.pdf
 
 # mac crap
 .DS_Store
+.Rproj.user
